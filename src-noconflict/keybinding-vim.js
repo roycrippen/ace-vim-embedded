@@ -33,7 +33,7 @@ var saveAs = saveAs || (function (view) {
       var event = new MouseEvent("click");
       node.dispatchEvent(event);
     }
-    , is_safari = /Version\/[\d\.]+.*Safari/.test(navigator.userAgent)
+    , is_safari = typeof navigator !== "undefined" ? /Version\/[\d\.]+.*Safari/.test(navigator.userAgent) : false
     , webkit_req_fs = view.webkitRequestFileSystem
     , req_fs = view.requestFileSystem || webkit_req_fs || view.mozRequestFileSystem
     , throw_outside = function (ex) {
@@ -1231,6 +1231,8 @@ ace.define("ace/keyboard/vim",["require","exports","module","ace/range","ace/lib
     { name: 'global', shortName: 'g' },
     { name: 'mdrender', shortName: 'mdr' },
     { name: 'write', shortName: 'w' },
+    { name: 'mdprint', shortName: 'mdp' },
+    { name: 'mds', shortName: 'mds' }
   ];
 
   var Pos = CodeMirror.Pos;
@@ -4788,10 +4790,11 @@ ace.define("ace/keyboard/vim",["require","exports","module","ace/range","ace/lib
   var exCommands = {
     mdrender: function (cm) {
       var val = cm.ace.getValue();
-      console.log(val);
       var w = window.open("", "render window");
-      w.document.title = 'MD Render'
-      w.document.write("<p>This window's name is: " + w.name + "</p>");
+      w.document.clear();
+      w.document.title = 'MD Render';
+      w.document.write(val)
+
     },
     write: function (cm, params) {
       if (!params.args || params.args.length < 1) {
@@ -4801,6 +4804,33 @@ ace.define("ace/keyboard/vim",["require","exports","module","ace/range","ace/lib
       var BB = window.Blob;
       var obj = { type: "text/plain;charset=" + window.document.characterSet }
       saveAs(new BB([cm.ace.getValue()], obj), params.args[0]);
+
+    },
+    mdprint: function (cm) {
+      var val = cm.ace.getValue();
+      var markdeepRegex = /<\s*script[^>]*markdeep[.min]*.js[^>]*>/i
+      var isMarkDeep = markdeepRegex.exec(val)
+      if (isMarkDeep) {
+        var w = window.open("", "printer window");
+        w.document.clear();
+
+        w.document.title = 'PRINTING';
+        w.document.write(val)
+        setTimeout(function () {
+
+          w.print();
+          w.close();
+        }, 200);
+      }
+      else {
+
+        showConfirm(cm, 'Invalid Markdeep: run \":mds\" to add MarkDeep reference');
+      }
+    },
+    mds: function (cm) {
+      var mds_val = "\n<script src=\"markdeep.js\"></script>";
+      var val = cm.ace.getValue();
+      cm.ace.setValue(val + mds_val)
 
     },
     colorscheme: function (cm, params) {
